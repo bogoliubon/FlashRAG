@@ -808,7 +808,8 @@ class SelfAskPipeline(BasicPipeline):
 
     def __init__(self, config, prompt_template=None, max_iter=5, single_hop=True, retriever=None, generator=None):
         super().__init__(config, prompt_template)
-        from flashrag.prompt.selfask_examplars import SELF_ASK_PROMPT_SINGLE_HOP, SELF_ASK_PROMPT_MULTI_HOP
+        from flashrag.prompt.selfask_examplars import SELF_ASK_PROMPT_SINGLE_HOP, SELF_ASK_PROMPT_MULTI_HOP_PW
+
 
         if generator is None:
             generator = get_generator(config)
@@ -819,14 +820,15 @@ class SelfAskPipeline(BasicPipeline):
 
         self.single_hop = single_hop
         self.max_iter = max_iter
-        self.P_INS = SELF_ASK_PROMPT_SINGLE_HOP if self.single_hop else SELF_ASK_PROMPT_MULTI_HOP
+        self.P_INS = SELF_ASK_PROMPT_SINGLE_HOP if self.single_hop else SELF_ASK_PROMPT_MULTI_HOP_PW
 
     def format_reference(self, retrieval_result):
+        """Format the retrieval result to a string"""
         format_reference = ""
         for idx, doc_item in enumerate(retrieval_result):
             content = doc_item["contents"]
-            title = content.split("\n")[0]
-            text = "\n".join(content.split("\n")[1:])
+            # substitute double line change and single line change into space
+            text = content.replace("\n\n", " ").replace("\n", " ")
             format_reference += f"Context{idx+1}: {text}\n"
 
         return format_reference
@@ -855,7 +857,7 @@ class SelfAskPipeline(BasicPipeline):
                 self.P_INS
                 + "\n"
                 + self.format_reference(retrieval_result)
-                + f"\nQuesiton: {question}"
+                + f"Quesiton: {question}"
                 + "\nAre follow up questions needed here: "
                 + follow_ups
                 + "\n"
