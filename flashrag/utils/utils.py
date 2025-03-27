@@ -45,8 +45,9 @@ def get_generator(config, **params):
         return getattr(importlib.import_module("flashrag.generator"), "OpenaiGenerator")(config, **params)
     
     # judge multimodal model
-    with open(os.path.join(config["generator_model_path"], "config.json"), "r") as f:
-        model_config = json.load(f)
+    # with open(os.path.join(config["generator_model_path"], "config.json"), "r") as f:
+    #     model_config = json.load(f)
+    model_config = AutoConfig.from_pretrained(config["generator_model_path"]).to_dict()
     arch = model_config['architectures'][0]
     if all(["vision" not in key for key in model_config.keys()]):
         is_mm = False
