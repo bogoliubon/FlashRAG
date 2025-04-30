@@ -15,6 +15,10 @@ from flashrag.utils import get_reranker
 from flashrag.retriever.utils import load_corpus, load_docs, convert_numpy, judge_image, judge_zh
 from flashrag.retriever.encoder import Encoder, STEncoder, ClipEncoder
 
+# HACK: Import process manager for shared memory from phantom_eval
+from phantom_eval.agents.manager import _manager
+# Dict for reusing BM25 searcher objects in shared memory
+BM25_SEARCHER_DICT = _manager.dict()
 
 def cache_manager(func):
     """
@@ -253,7 +257,12 @@ class BM25Retriever(BaseTextRetriever):
             self.corpus = load_corpus(self.corpus_path)
             is_zh = judge_zh(self.corpus[0]["contents"])
 
-            self.searcher = bm25s.BM25.load(self.index_path, mmap=True, load_corpus=False)
+            # HACK: Reuse BM25 searcher objects in shared memory to speed up initialization
+            if self.index_path in BM25_SEARCHER_DICT:
+                self.searcher = BM25_SEARCHER_DICT[self.index_path]
+            else:
+                self.searcher = bm25s.BM25.load(self.index_path, mmap=True, load_corpus=False)
+                BM25_SEARCHER_DICT[self.index_path] = self.searcher
             if is_zh:
                 self.tokenizer = bm25s.tokenization.Tokenizer(stopwords="zh")
                 self.tokenizer.load_stopwords(self.index_path)
